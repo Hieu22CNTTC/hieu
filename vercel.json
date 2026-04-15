@@ -1,26 +1,64 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/dist",
-  "framework": "vite",
-  "env": {
-    "VITE_API_URL": {
-      "description": "Backend API URL (set to your backend deployment URL)",
-      "required": false,
-      "default": "http://localhost:3000"
+  "experimentalServices": {
+    "frontend": {
+      "entrypoint": "frontend",
+      "routePrefix": "/",
+      "framework": "vite"
+    },
+    "backend": {
+      "entrypoint": "backend",
+      "routePrefix": "/_/backend"
     }
   },
-  "envPrefix": "VITE_",
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "destination": "$1",
-      "continue": true
+  "env": {
+    "VITE_API_URL": {
+      "description": "Backend API URL",
+      "required": false,
+      "default": "http://localhost:3000"
     },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+    "DATABASE_URL": {
+      "description": "MySQL Database URL",
+      "required": true
+    },
+    "NODE_ENV": {
+      "description": "Node environment",
+      "required": false,
+      "default": "production"
+    },
+    "JWT_SECRET": {
+      "description": "JWT secret key (min 32 chars)",
+      "required": true
+    },
+    "JWT_REFRESH_SECRET": {
+      "description": "JWT refresh secret key (min 32 chars)",
+      "required": true
+    },
+    "EMAIL_USER": {
+      "description": "Gmail SMTP user email",
+      "required": false
+    },
+    "EMAIL_PASSWORD": {
+      "description": "Gmail App Password",
+      "required": false
+    },
+    "MOMO_PARTNER_CODE": {
+      "description": "MoMo partner code",
+      "required": false
+    },
+    "MOMO_ACCESS_KEY": {
+      "description": "MoMo access key",
+      "required": false
+    },
+    "MOMO_SECRET_KEY": {
+      "description": "MoMo secret key",
+      "required": false
+    },
+    "MOMO_ENDPOINT": {
+      "description": "MoMo API endpoint",
+      "required": false,
+      "default": "https://test-payment.momo.vn/v2/gateway/api/create"
     }
-  ]
+  }
 }
 

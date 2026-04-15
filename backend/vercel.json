@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "buildCommand": "npm install",
+  "env": {
+    "DATABASE_URL": {
+      "description": "MySQL Database URL",
+      "required": true
+    },
+    "NODE_ENV": {
+      "description": "Node environment",
+      "default": "production"
+    },
+    "JWT_SECRET": {
+      "description": "JWT secret key (32+ characters)",
+      "required": true
+    },
+    "JWT_REFRESH_SECRET": {
+      "description": "JWT refresh secret key (32+ characters)",
+      "required": true
+    },
+    "JWT_ACCESS_EXPIRES_IN": {
+      "default": "15m"
+    },
+    "JWT_REFRESH_EXPIRES_IN": {
+      "default": "7d"
+    },
+    "SESSION_TIMEOUT": {
+      "default": "30"
+    },
+    "EMAIL_USER": {
+      "description": "Gmail SMTP email"
+    },
+    "EMAIL_PASSWORD": {
+      "description": "Gmail App Password (16 chars)"
+    },
+    "MOMO_PARTNER_CODE": {
+      "description": "MoMo Partner Code"
+    },
+    "MOMO_ACCESS_KEY": {
+      "description": "MoMo Access Key"
+    },
+    "MOMO_SECRET_KEY": {
+      "description": "MoMo Secret Key"
+    },
+    "MOMO_ENDPOINT": {
+      "description": "MoMo endpoint",
+      "default": "https://test-payment.momo.vn/v2/gateway/api/create"
+    },
+    "MOMO_REDIRECT_URL": {
+      "description": "MoMo redirect URL after payment"
+    },
+    "MOMO_IPN_URL": {
+      "description": "MoMo IPN callback URL"
+    },
+    "BACKEND_URL": {
+      "description": "Backend URL (set to your Vercel backend URL)"
+    },
+    "FRONTEND_URL": {
+      "description": "Frontend URL (set to your Vercel frontend URL)"
+    },
+    "BOOKING_TIMEOUT_MINUTES": {
+      "default": "15"
+    }
+  }
+}
