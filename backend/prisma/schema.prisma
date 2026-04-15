@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum Role {
+  USER
+  SALES
+  MANAGER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REJECTED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum TicketClass {
+  ECONOMY
+  BUSINESS
+}
+
+enum TicketTypeName {
+  ADULT
+  CHILD
+  INFANT
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  fullName      String
+  phoneNumber   String?
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bookings      Booking[]
+  payments      Payment[]
+
+  @@map("users")
+}
+
+model Airport {
+  id            String    @id @default(cuid())
+  code          String    @unique // VN-HAN, VN-SGN, VN-DAD
+  name          String
+  city          String
+  country       String
+  timezone      String    @default("Asia/Ho_Chi_Minh")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  departureRoutes Route[] @relation("DepartureAirport")
+  arrivalRoutes   Route[] @relation("ArrivalAirport")
+
+  @@map("airports")
+}
+
+model Aircraft {
+  id            String    @id @default(cuid())
+  model         String    // A321, Boeing 787
+  totalSeats    Int
+  businessSeats Int
+  economySeats  Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  flights       Flight[]
+
+  @@map("aircraft")
+}
+
+model TicketType {
+  id              String          @id @default(cuid())
+  name            TicketTypeName  @unique
+  pricePercentage Float           // ADULT: 100, CHILD: 75, INFANT: 10
+  minAge          Int?            // ADULT: 12+, CHILD: 2-11, INFANT: 0-1
+  maxAge          Int?
+  description     String?         @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  bookingPassengers BookingPassenger[]
+
+  @@map("ticket_types")
+}
+
+model Route {
+  id              String    @id @default(cuid())
+  departureId     String
+  arrivalId       String
+  distance        Int?      // in kilometers
+  duration        Int?      // in minutes
+  standardPrice   Float?    // base price for route (ADULT ECONOMY price)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  departure       Airport   @relation("DepartureAirport", fields: [departureId], references: [id])
+  arrival         Airport   @relation("ArrivalAirport", fields: [arrivalId], references: [id])
+  flights         Flight[]
+
+  @@unique([departureId, arrivalId])
+  @@map("routes")
+}
+
+model Flight {
+  id                String    @id @default(cuid())
+  flightNumber      String    @unique
+  routeId           String
+  aircraftId        String
+  departureTime     DateTime
+  arrivalTime       DateTime
+  basePrice         Float     // ADULT ECONOMY base price for this flight
+  businessPrice     Float     // ADULT BUSINESS price
+  promotionId       String?
+  isActive          Boolean   @default(true)
+  notes             String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  route             Route     @relation(fields: [routeId], references: [id])
+  aircraft          Aircraft  @relation(fields: [aircraftId], references: [id])
+  promotion         Coupon?   @relation(fields: [promotionId], references: [id])
+  seatInventory     SeatInventory[]
+  seatHolds         SeatHold[]
+  bookings          Booking[]
+
+  @@map("flights")
+}
+
+model SeatInventory {
+  id              String      @id @default(cuid())
+  flightId        String
+  ticketClass     TicketClass
+  availableSeats  Int
+  bookedSeats     Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  flight          Flight      @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@unique([flightId, ticketClass])
+  @@map("seat_inventory")
+}
+
+model SeatHold {
+  id            String      @id @default(cuid())
+  flightId      String
+  seatNumber    String
+  ticketClass   TicketClass
+  bookingId     String?
+  heldBy        String?
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+
+  flight        Flight      @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@unique([flightId, seatNumber])
+  @@index([flightId])
+  @@index([expiresAt])
+  @@map("seat_holds")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingCode     String        @unique // For public check
+  userId          String?       // Optional - null for public bookings
+  flightId        String
+  totalAmount     Float
+  status          BookingStatus @default(PENDING)
+  contactEmail    String        // For public bookings
+  contactPhone    String        // For public bookings
+  expiresAt       DateTime
+  rejectedBy      String?       // userId of SALES who rejected
+  rejectedAt      DateTime?
+  rejectionReason String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user            User?         @relation(fields: [userId], references: [id])
+  flight          Flight        @relation(fields: [flightId], references: [id])
+  passengers      BookingPassenger[]
+  payments        Payment[]
+
+  @@index([bookingCode])
+  @@index([userId])
+  @@map("bookings")
+}
+
+model BookingPassenger {
+  id            String      @id @default(cuid())
+  bookingId     String
+  ticketTypeId  String      // ADULT, CHILD, INFANT
+  ticketClass   TicketClass
+  fullName      String
+  dateOfBirth   DateTime
+  calculatedAge Int?        // Age at time of booking
+  priceAmount   Float       // Final calculated price for this passenger
+  seatNumber    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  booking       Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  ticketType    TicketType  @relation(fields: [ticketTypeId], references: [id])
+
+  @@map("booking_passengers")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  userId          String?       // Optional for public bookings
+  amount          Float
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String        @default("MoMo")
+  transactionId   String?       @unique
+  momoRequestId   String?       @unique
+  momoOrderId     String?
+  eTicketCode     String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  booking         Booking       @relation(fields: [bookingId], references: [id])
+  user            User?         @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+model Coupon {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  discountPercent Float
+  maxDiscount     Float?
+  validFrom       DateTime
+  validTo         DateTime
+  usageLimit      Int?
+  usedCount       Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  flights         Flight[]
+
+  @@map("coupons")
+}

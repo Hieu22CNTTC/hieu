@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: flight_booking_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root 
+      MYSQL_DATABASE: flight_booking
+      MYSQL_USER: flight_user
+      MYSQL_PASSWORD: flight_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - flight-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flight_booking_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://root:root@mysql:3306/flight_booking
+      JWT_SECRET: your_super_secret_jwt_key_change_in_production_2026
+      JWT_REFRESH_SECRET: your_super_secret_refresh_key_change_in_production_2026
+      JWT_EXPIRES_IN: 30m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      MOMO_PARTNER_CODE: MOMOBKUN20180529
+      MOMO_ACCESS_KEY: klm05TvNBzhg7h7j
+      MOMO_SECRET_KEY: at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa
+      MOMO_ENDPOINT: https://test-payment.momo.vn/v2/gateway/api/create
+      MOMO_RETURN_URL: http://localhost:3000/api/payments/momo/return
+      MOMO_IPN_URL: http://localhost:3000/api/payments/momo/callback
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+    networks:
+      - flight-network
+    command: sh -c "npx prisma migrate deploy && npx prisma generate && npm start"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flight_booking_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - flight-network
+
+volumes:
+  mysql_data:
+
+networks:
+  flight-network:
+    driver: bridge
