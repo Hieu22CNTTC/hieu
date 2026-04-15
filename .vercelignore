@@ -1,0 +1,50 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+# Backend (not needed for frontend deployment)
+backend
+database
+plans
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist
+build
+
+# Logs
+logs
+*.log
+
+# Environment
+.env.local
+.env.*.local
+.env
+
+# Documentation (optional, can comment out if needed)
+# *.md
+
+# Testing
+coverage
+.nyc_output
+
+# Temporary
+tmp
+temp
+*.tmp

@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "env": {
+    "VITE_API_URL": {
+      "description": "Backend API URL (set to your backend deployment URL)",
+      "required": false,
+      "default": "http://localhost:3000"
+    }
+  },
+  "envPrefix": "VITE_",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "destination": "$1",
+      "continue": true
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
+

@@ -2,7 +2,51 @@
 
 Hệ thống đặt vé máy bay full-stack với đầy đủ tính năng theo mô hình Vietnam Airlines, bổ sung các yêu cầu từ SRS Document.
 
-## � Recent Updates (January 12, 2026)
+## 🚀 Recent Updates (April 15, 2026) - Vercel Deployment Ready!
+
+### ✈️ Vercel Deployment Support (⭐ NEW)
+**Deploy to Vercel in 5 minutes!**
+
+**Features:**
+- ✅ Frontend deployment to Vercel (auto-deploy from GitHub)
+- ✅ Backend deployment options (Railway, Render, DigitalOcean)
+- ✅ Environment variable management
+- ✅ Auto-scaling & CDN
+- ✅ Zero-downtime deployments
+- ✅ Production ready configuration
+
+**Quick Start:**
+```bash
+# Frontend to Vercel (5 min)
+vercel --prod
+
+# Backend to Railway (10 min)
+# See RAILWAY_DEPLOYMENT.md for details
+
+# Update API URL in Vercel
+# Set VITE_API_URL environment variable
+```
+
+**Documentation:**
+- [Vercel Quick Start Guide](VERCEL_QUICK_START.md) ⭐ Start here!
+- [Complete Vercel Deployment Guide](VERCEL_DEPLOYMENT.md)
+- [Railway Backend Deployment](RAILWAY_DEPLOYMENT.md)
+
+**Configuration Files:**
+- `vercel.json` - Vercel build configuration
+- `.vercelignore` - Files to exclude from deployment
+- `frontend/vite.config.js` - Updated with API URL support
+- `frontend/.env.example` - Environment variables example
+
+**MoMo API v3 Upgrade (April 15, 2026):**
+- ✅ MoMo v3 API support with userInfo, storeName, referenceId
+- ✅ Enhanced payment tracking with promotion details
+- ✅ 100% backward compatible
+- ✅ See [MOMO_V3_UPGRADE_SUMMARY.md](MOMO_V3_UPGRADE_SUMMARY.md)
+
+---
+
+## 📋 Recent Updates (January 12, 2026)
 
 ### 🔐 Admin Approval Password Reset Flow
 **Luồng đặt lại mật khẩu với xác nhận admin 2 bước:**
@@ -107,19 +151,20 @@ DoAn/
 │   ├── prisma/           # Prisma schema & migrations
 │   ├── config/           # Database & app config
 │   ├── controllers/      # Request handlers
-│   │   └── authController.js  # ⭐ Updated: Admin approval flow
 │   ├── middleware/       # Auth, validation, error handling
 │   ├── routes/           # API routes
-│   │   └── authRoutes.js      # ⭐ Updated: Approve-reset route
-│   ├── services/         # Business logic
 │   ├── utils/            # Helper functions
-│   │   └── emailService.js    # ⭐ New: Gmail SMTP service
 │   ├── server.js         # Entry point
-│   ├── EMAIL_CONFIG.md           # ⭐ Gmail setup guide
-│   ├── EMAIL_IMPLEMENTATION.md   # ⭐ Email service docs
-│   ├── ADMIN_APPROVAL_FLOW.md    # ⭐ Approval flow guide
-│   └── ADMIN_APPROVAL_IMPLEMENTATION.md  # ⭐ Complete guide
-├── frontend/             # React Frontend (Coming soon)
+│   ├── .env.example      # Environment variables template
+│   ├── .env              # Current configuration (local)
+│   ├── package.json      # Dependencies
+│   └── README.md
+├── frontend/             # React Frontend + Vite
+│   ├── src/              # React source code
+│   ├── vite.config.js    # ⭐ Updated: API URL configuration
+│   ├── .env.example      # Environment variables template
+│   ├── package.json      # Dependencies
+│   └── README.md
 ├── plans/                # Project planning documents
 │   ├── PROJECT_PLAN.md           # Master plan
 │   ├── 01-database-plan.md       # Phase 1: Database
@@ -127,7 +172,13 @@ DoAn/
 │   ├── 03-booking-payment-plan.md
 │   ├── 04-admin-apis-plan.md
 │   ├── 05-frontend-setup-plan.md
-│   └── 06-srs-enhancement-plan.md  # ⭐ SRS enhancements
+│   └── 06-srs-enhancement-plan.md
+├── vercel.json           # ⭐ Vercel configuration (frontend)
+├── .vercelignore         # ⭐ Files to exclude from Vercel
+├── VERCEL_QUICK_START.md # ⭐ Quick start guide for Vercel (5 min)
+├── VERCEL_DEPLOYMENT.md  # ⭐ Complete Vercel deployment guide
+├── RAILWAY_DEPLOYMENT.md # ⭐ Backend deployment to Railway (10 min)
+├── MOMO_V3_UPGRADE_SUMMARY.md # ⭐ MoMo API v3 upgrade
 ├── docker-compose.yml    # MySQL Docker setup
 └── README.md             # This file
 ```
@@ -1386,6 +1437,96 @@ const fetchData = async () => {
   const { data } = await api.get('/my-endpoint');
   console.log(data);
 };
+```
+
+---
+
+## 🌐 Deployment Guides (⭐ NEW - April 15, 2026)
+
+### Quick Deployment to Production
+
+Your app is **production-ready** and can be deployed to Vercel + Railway in **15 minutes**!
+
+#### 🚀 Deploy Frontend (5 minutes)
+```bash
+npm install -g vercel
+vercel --prod
+```
+- Auto-deploy from GitHub
+- Global CDN
+- Free tier available
+- Domain: `your-app.vercel.app`
+
+#### 🛠️ Deploy Backend (10 minutes)
+```bash
+# Use Railway (recommended)
+# 1. Go to https://railway.app
+# 2. Connect GitHub repo
+# 3. Add MySQL service
+# 4. Set environment variables
+# 5. Deploy automatically
+```
+
+### Deployment Options
+
+| Platform | Frontend | Backend | Database | Cost | Link |
+|----------|----------|---------|----------|------|------|
+| **Vercel** | ✅ Recommended | ❌ Not ideal | N/A | Free | [Vercel Docs](https://vercel.com) |
+| **Railway** | ✅ OK | ✅ Recommended | ✅ MySQL | Free tier | [Railway Docs](https://railway.app) |
+| **Render** | ✅ OK | ✅ Good | ✅ Postgres | Free tier | [Render Docs](https://render.com) |
+| **DigitalOcean** | ✅ | ✅ | ✅ | $5-20/mo | [DO Docs](https://digitalocean.com) |
+
+### 📚 Complete Deployment Documentation
+
+**Start here:**
+1. [VERCEL_QUICK_START.md](VERCEL_QUICK_START.md) - 5 minute setup guide
+2. [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) - Step-by-step Railway setup
+3. [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) - Complete guide with all options
+
+**Key Configuration Files:**
+- `vercel.json` - Frontend build configuration
+- `.vercelignore` - Files to exclude
+- `frontend/.env.example` - Frontend environment variables
+- `backend/.env.example` - Backend environment variables
+
+### Deploy Checklist
+
+**Frontend (Vercel):**
+```
+✅ Push code to GitHub
+✅ Create Vercel account (vercel.com)
+✅ Connect GitHub repo
+✅ Set VITE_API_URL environment variable
+✅ Deploy with "vercel --prod"
+✅ Test at your-app.vercel.app
+```
+
+**Backend (Railway):**
+```
+✅ Create Railway account (railway.app)
+✅ Connect GitHub repo
+✅ Select "backend" folder
+✅ Add MySQL service
+✅ Set all environment variables
+✅ Deploy (auto-triggers)
+✅ Copy API URL
+✅ Update VITE_API_URL in Vercel
+```
+
+### Test Production Deployment
+
+```bash
+# Test frontend loads
+curl https://your-app.vercel.app
+
+# Test backend API
+curl https://your-api.railway.app/api/public/flights
+
+# Test in browser
+# 1. Visit https://your-app.vercel.app
+# 2. Check Console for errors
+# 3. Try creating a booking
+# 4. Complete payment flow
 ```
 
 ---
