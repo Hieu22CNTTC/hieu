@@ -637,10 +637,10 @@ export default function AdminDashboard() {
                     value={dateRange.endDate}
                     onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
                   />
-                  <button className="btn btn-sm btn-primary">
+                  {/* <button className="btn btn-sm btn-primary">
                     <Download size={16} className="mr-1" />
                     Export
-                  </button>
+                  </button> */}
                 </div>
               </div>
               
