@@ -166,7 +166,6 @@ export default function AdminDashboard() {
       setRoutes(routesArray)
       setCoupons(couponsArray)
       setBookings(bookingsArray)
-      console.log('Bookings loaded:', bookingsArray)
     } catch (error) {
       toast.error('Không thể tải dữ liệu')
       console.error(error)

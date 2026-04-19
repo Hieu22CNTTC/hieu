@@ -3,17 +3,16 @@ import { z } from 'zod';
 /**
  * Search flights validation schema
  */
+const emptyToUndefined = z.string().transform(v => v === '' ? undefined : v).optional()
+
 export const searchFlightsSchema = {
   query: z.object({
-    originAirportId: z.string()
-      .min(1, 'Origin airport is required')
-      .optional(),
-    destinationAirportId: z.string()
-      .min(1, 'Destination airport is required')
-      .optional(),
+    originAirportId: emptyToUndefined,
+    destinationAirportId: emptyToUndefined,
     departureDate: z.string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-      .optional(),
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
     minPrice: z.string()
       .regex(/^\d+$/, 'Min price must be a number')
       .transform(Number)
@@ -22,7 +21,7 @@ export const searchFlightsSchema = {
       .regex(/^\d+$/, 'Max price must be a number')
       .transform(Number)
       .optional(),
-    sortBy: z.enum(['price', 'departureTime', 'duration'])
+    sortBy: z.enum(['price', 'basePrice', 'departureTime', 'duration'])
       .optional(),
     sortOrder: z.enum(['asc', 'desc'])
       .optional()

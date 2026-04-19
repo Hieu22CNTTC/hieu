@@ -1,7 +1,4 @@
 node_modules/
-dist/
-build/
-.env
 .DS_Store
 *.log
 *.lock
@@ -12,3 +9,4 @@ pnpm-lock.yaml
 # Prisma
 prisma/migrations/
 .prisma/
+temp/apivemaybay/

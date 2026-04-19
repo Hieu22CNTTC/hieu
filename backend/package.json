@@ -7,6 +7,10 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "crawl:once": "node scripts/crawlFlightsOnce.js",
+    "crawl:all": "node scripts/crawlAllAirports.js",
+    "db:deploy": "prisma migrate deploy",
+    "db:setup:server": "node scripts/dbSetupServer.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
@@ -26,6 +30,7 @@
     "@prisma/client": "^5.8.0",
     "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
+    "cheerio": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

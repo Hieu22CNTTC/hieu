@@ -10,12 +10,11 @@ Backend API cho hệ thống đặt vé máy bay với đầy đủ tính năng 
 npm install
 ```
 
-### 2. Khởi động MySQL Database
+### 2. Chuẩn bị SQL Server local
 
-```bash
-# Từ thư mục root (DoAn/)
-docker-compose up -d
-```
+- Cài SQL Server (Express/Developer) và đảm bảo service đang chạy ở cổng `1433`
+- Tạo database `flight_booking`
+- Bật SQL Authentication nếu dùng tài khoản `sa`
 
 ### 3. Cấu hình môi trường
 
@@ -112,7 +111,7 @@ npm run db:reset
 
 - **Node.js** + **Express**: Server framework
 - **Prisma ORM**: Database ORM
-- **MySQL 8**: Database
+- **SQL Server**: Database
 - **JWT**: Authentication
 - **bcrypt**: Password hashing
 - **Zod**: Validation

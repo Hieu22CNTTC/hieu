@@ -52,7 +52,6 @@ export default function SeatSelection() {
     try {
       // Get booking info
       const bookingRes = await api.get(`/public/bookings/${bookingCode}`)
-      console.log('Booking response:', bookingRes.data)
       const bookingData = bookingRes.data.data
       
       if (!bookingData) {
@@ -75,7 +74,6 @@ export default function SeatSelection() {
 
       // Get seat map
       const seatRes = await api.get(`/seats/${bookingData.flight.id}`)
-      console.log('Seat map response:', seatRes.data)
       setSeatMap(seatRes.data.data)
     } catch (error) {
       console.error('Error fetching data:', error)

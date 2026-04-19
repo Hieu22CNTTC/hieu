@@ -11,7 +11,9 @@ import { verifyEmailConfig } from './utils/emailService.js';
 import { 
   startSeatCleanupJob,
   startPaymentCleanupJob,
-  startBookingExpirationJob
+  startBookingExpirationJob,
+  startFlightHtmlCrawlJob,
+  startExpiredFlightCleanupJob
 } from './utils/cronJobs.js';
 
 // Load environment variables
@@ -25,8 +27,10 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 
 // CORS configuration
+const allowAllCors = String(process.env.CORS_ALLOW_ALL ?? 'true').toLowerCase() !== 'false';
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: allowAllCors ? true : (process.env.FRONTEND_URL || 'http://localhost:5173'),
   credentials: true
 }));
 
@@ -110,6 +114,8 @@ const startServer = async () => {
     startSeatCleanupJob();
     startPaymentCleanupJob();
     startBookingExpirationJob();
+    startFlightHtmlCrawlJob();
+    startExpiredFlightCleanupJob();
 
     // Start listening
     app.listen(PORT, () => {

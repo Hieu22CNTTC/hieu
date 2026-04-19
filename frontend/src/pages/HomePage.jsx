@@ -1,14 +1,32 @@
-import { Link } from 'react-router-dom'
-import { Plane, Search, Shield, CreditCard, MapPin, TrendingUp, Clock, Star, Users, Award } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Plane, Search, Shield, CreditCard, MapPin, TrendingUp, Clock, Star, Users, Award, ArrowLeftRight } from 'lucide-react'
 import { useState } from 'react'
 
+const AIRPORTS = [
+  { code: 'HAN', city: 'Hà Nội' },
+  { code: 'SGN', city: 'TP. Hồ Chí Minh' },
+  { code: 'DAD', city: 'Đà Nẵng' },
+  { code: 'CXR', city: 'Nha Trang' },
+  { code: 'PQC', city: 'Phú Quốc' },
+  { code: 'HPH', city: 'Hải Phòng' },
+  { code: 'VCA', city: 'Cần Thơ' },
+  { code: 'HUI', city: 'Huế' },
+]
+
 export default function HomePage() {
+  const navigate = useNavigate()
   const [searchForm, setSearchForm] = useState({
     from: '',
     to: '',
     departDate: '',
-    passengers: 1
   })
+
+  const handleSwap = () => setSearchForm(prev => ({ ...prev, from: prev.to, to: prev.from }))
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    navigate(`/search?from=${searchForm.from}&to=${searchForm.to}&date=${searchForm.departDate}`)
+  }
 
   const popularDestinations = [
     { city: 'Hà Nội', code: 'HAN', image: '🏛️', price: '1.200.000đ' },
@@ -71,84 +89,69 @@ export default function HomePage() {
           </div>
 
           {/* Quick Search Form */}
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 md:p-8">
-            <div className="grid md:grid-cols-4 gap-4 mb-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-bold text-black text-base">Từ</span>
-                </label>
-                <select 
-                  className="select select-bordered w-full text-black bg-white"
+          <form onSubmit={handleSearch} className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-5 md:p-7">
+            <div className="flex flex-col md:flex-row items-end gap-3">
+              {/* From */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Điểm đi</label>
+                <select
+                  className="select select-bordered w-full text-black bg-gray-50 focus:bg-white"
                   value={searchForm.from}
                   onChange={(e) => setSearchForm({...searchForm, from: e.target.value})}
+                  required
                 >
-                  <option value="" className="text-black bg-white">Chọn điểm đi</option>
-                  <option value="SGN" className="text-black bg-white">TP. Hồ Chí Minh (SGN)</option>
-                  <option value="HAN" className="text-black bg-white">Hà Nội (HAN)</option>
-                  <option value="DAD" className="text-black bg-white">Đà Nẵng (DAD)</option>
-                  <option value="CXR" className="text-black bg-white">Nha Trang (CXR)</option>
-                  <option value="PQC" className="text-black bg-white">Phú Quốc (PQC)</option>
+                  <option value="">Chọn điểm đi</option>
+                  {AIRPORTS.map(a => (
+                    <option key={a.code} value={a.code}>{a.city} ({a.code})</option>
+                  ))}
                 </select>
               </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-bold text-black text-base">Đến</span>
-                </label>
-                <select 
-                  className="select select-bordered w-full text-black bg-white"
+              {/* Swap */}
+              <button
+                type="button"
+                className="btn btn-circle btn-outline border-blue-300 text-blue-500 hover:bg-blue-50 self-end mb-0.5 shrink-0"
+                onClick={handleSwap}
+                title="Đổi chiều"
+              >
+                <ArrowLeftRight size={16} />
+              </button>
+
+              {/* To */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Điểm đến</label>
+                <select
+                  className="select select-bordered w-full text-black bg-gray-50 focus:bg-white"
                   value={searchForm.to}
                   onChange={(e) => setSearchForm({...searchForm, to: e.target.value})}
+                  required
                 >
-                  <option value="" className="text-black bg-white">Chọn điểm đến</option>
-                  <option value="HAN" className="text-black bg-white">Hà Nội (HAN)</option>
-                  <option value="SGN" className="text-black bg-white">TP. Hồ Chí Minh (SGN)</option>
-                  <option value="DAD" className="text-black bg-white">Đà Nẵng (DAD)</option>
-                  <option value="CXR" className="text-black bg-white">Nha Trang (CXR)</option>
-                  <option value="PQC" className="text-black bg-white">Phú Quốc (PQC)</option>
+                  <option value="">Chọn điểm đến</option>
+                  {AIRPORTS.map(a => (
+                    <option key={a.code} value={a.code}>{a.city} ({a.code})</option>
+                  ))}
                 </select>
               </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-bold text-black text-base">Ngày bay</span>
-                </label>
-                <input 
-                  type="date" 
-                  className="input input-bordered w-full text-black"
+              {/* Date */}
+              <div className="w-full md:w-44 shrink-0">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ngày bay</label>
+                <input
+                  type="date"
+                  className="input input-bordered w-full text-black bg-gray-50 focus:bg-white"
                   value={searchForm.departDate}
                   onChange={(e) => setSearchForm({...searchForm, departDate: e.target.value})}
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>
 
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text font-bold text-black text-base">Hành khách</span>
-                </label>
-                <input 
-                  type="number" 
-                  className="input input-bordered w-full text-black"
-                  value={searchForm.passengers}
-                  onChange={(e) => setSearchForm({...searchForm, passengers: e.target.value})}
-                  min="1"
-                  max="9"
-                />
-              </div>
+              {/* Search */}
+              <button type="submit" className="btn btn-primary btn-lg px-8 self-end shrink-0">
+                <Search size={20} className="mr-1" />
+                Tìm kiếm
+              </button>
             </div>
-
-            <Link 
-              to={`/search?from=${searchForm.from}&to=${searchForm.to}&date=${searchForm.departDate}&passengers=${searchForm.passengers}`}
-              className="btn btn-primary btn-lg w-full text-lg"
-              onClick={() => {
-                console.log('Homepage search form:', searchForm)
-                console.log('Generated URL:', `/search?from=${searchForm.from}&to=${searchForm.to}&date=${searchForm.departDate}&passengers=${searchForm.passengers}`)
-              }}
-            >
-              <Search className="mr-2" size={24} />
-              Tìm chuyến bay
-            </Link>
-          </div>
+          </form>
         </div>
       </section>
 
