@@ -60,6 +60,7 @@ export const createMoMoPayment = async (req, res) => {
     // Generate IDs
     const orderId = `ORD_${booking.bookingCode}_${Date.now()}`;
     const requestId = `REQ_${booking.bookingCode}_${Date.now()}`;
+    const pendingTransactionId = `PENDING_TX_${requestId}`;
     const pendingETicketCode = `PENDING_${requestId}`;
     const amount = Math.round(booking.totalAmount);
     const orderInfo = `Thanh toán vé máy bay ${booking.flight.flightNumber}`;
@@ -112,6 +113,9 @@ export const createMoMoPayment = async (req, res) => {
         amount: booking.totalAmount,
         status: 'PENDING',
         paymentMethod: 'MoMo',
+        // SQL Server unique constraints allow only one NULL value,
+        // so keep a unique placeholder before getting real transactionId.
+        transactionId: pendingTransactionId,
         momoRequestId: requestId,
         momoOrderId: orderId,
         // SQL Server unique constraints allow only one NULL value,
@@ -279,7 +283,7 @@ export const handleMoMoCallback = async (req, res) => {
         where: { id: payment.id },
         data: {
           status: 'FAILED',
-          transactionId: transId ? transId.toString() : null,
+          transactionId: transId ? transId.toString() : `FAILED_TX_${payment.id}_${Date.now()}`,
           updatedAt: new Date()
         }
       });

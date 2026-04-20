@@ -101,8 +101,15 @@ export default function FlightDetails() {
     e.preventDefault()
     
     // Validation
-    if (passengers.some(p => !p.fullName || !p.dateOfBirth || !p.idNumber)) {
-      toast.error('Vui lòng điền đầy đủ thông tin hành khách')
+    const invalidPassengerIndex = passengers.findIndex((p) => {
+      const fullName = (p.fullName || '').trim()
+      const dateOfBirth = (p.dateOfBirth || '').trim()
+      const idNumber = (p.idNumber || '').trim()
+      return fullName.length < 2 || !dateOfBirth || !idNumber
+    })
+
+    if (invalidPassengerIndex !== -1) {
+      toast.error(`Hành khách ${invalidPassengerIndex + 1}: Họ tên phải từ 2 ký tự và điền đủ thông tin bắt buộc`)
       return
     }
 
@@ -118,7 +125,11 @@ export default function FlightDetails() {
         seatClass: ticketClass,
         contactEmail: contactInfo.email.trim(),
         contactPhone: contactInfo.phone.replace(/\D/g, ''),
-        passengers,
+        passengers: passengers.map((p) => ({
+          ...p,
+          fullName: p.fullName.trim(),
+          idNumber: p.idNumber.trim()
+        })),
         couponCode: couponCode || undefined
       })
 
