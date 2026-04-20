@@ -27,6 +27,8 @@ cp .env.example .env
 
 ### 4. Chạy migrations & seed
 
+Lưu ý: thư mục `prisma/migrations/` phải được commit vào git. Nếu migration chỉ có ở máy local mà không được push, `npm run db:deploy` hoặc `npm run db:setup:server` trên server sẽ báo không có migration và không tạo được bảng.
+
 ```bash
 # Generate Prisma Client
 npm run db:generate

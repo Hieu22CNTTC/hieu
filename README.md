@@ -125,6 +125,8 @@ Script tren se:
 - `prisma migrate deploy`
 - seed lan dau neu DB rong
 
+Luu y: can commit day du `backend/prisma/migrations/` len git. Neu server khong co migration SQL da generate, `prisma migrate deploy` se khong tao bang du lieu du schema Prisma da ton tai trong repo.
+
 ## 8) Chay backend bang PM2
 
 ```bash
