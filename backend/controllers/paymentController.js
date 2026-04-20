@@ -60,6 +60,7 @@ export const createMoMoPayment = async (req, res) => {
     // Generate IDs
     const orderId = `ORD_${booking.bookingCode}_${Date.now()}`;
     const requestId = `REQ_${booking.bookingCode}_${Date.now()}`;
+    const pendingETicketCode = `PENDING_${requestId}`;
     const amount = Math.round(booking.totalAmount);
     const orderInfo = `Thanh toán vé máy bay ${booking.flight.flightNumber}`;
     const requestType = 'captureWallet';
@@ -112,7 +113,10 @@ export const createMoMoPayment = async (req, res) => {
         status: 'PENDING',
         paymentMethod: 'MoMo',
         momoRequestId: requestId,
-        momoOrderId: orderId
+        momoOrderId: orderId,
+        // SQL Server unique constraints allow only one NULL value,
+        // so we store a temporary unique value and replace it after success.
+        eTicketCode: pendingETicketCode
       }
     });
 
