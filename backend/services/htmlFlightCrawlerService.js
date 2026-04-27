@@ -95,6 +95,78 @@ const parseDateTime = (value) => {
   return date;
 };
 
+const formatDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+};
+
+const formatDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const buildCrawlTargetDates = () => {
+  const start = process.env.CRAWL_TARGET_DATE
+    ? new Date(process.env.CRAWL_TARGET_DATE)
+    : new Date();
+
+  if (Number.isNaN(start.getTime())) {
+    logger.warn('[Crawl] Invalid CRAWL_TARGET_DATE, fallback to current date');
+    start.setTime(Date.now());
+  }
+
+  start.setHours(0, 0, 0, 0);
+
+  const configuredDaysAhead = Number(process.env.CRAWL_DAYS_AHEAD ?? 7);
+  const daysAhead = Number.isFinite(configuredDaysAhead)
+    ? Math.max(0, Math.floor(configuredDaysAhead))
+    : 7;
+  const dates = [];
+
+  for (let offset = 0; offset <= daysAhead; offset += 1) {
+    const date = new Date(start);
+    date.setDate(start.getDate() + offset);
+    dates.push(date);
+  }
+
+  return dates;
+};
+
+const parseTimeParts = (value) => {
+  const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+
+  return {
+    hour: Number(match[1]),
+    minute: Number(match[2])
+  };
+};
+
+const buildDateSpecificFlight = (rawFlight, targetDate) => {
+  const timeParts = parseTimeParts(rawFlight.departureTime);
+  const departureTime = new Date(targetDate);
+
+  if (timeParts) {
+    departureTime.setHours(timeParts.hour, timeParts.minute, 0, 0);
+  } else {
+    const parsed = parseDepartureDateTime(rawFlight.departureTime, formatDateInput(targetDate));
+    if (parsed) {
+      departureTime.setHours(parsed.getHours(), parsed.getMinutes(), 0, 0);
+    }
+  }
+
+  return {
+    ...rawFlight,
+    flightNumber: `${rawFlight.flightNumber}-${formatDateKey(targetDate)}`,
+    sourceFlightNumber: rawFlight.flightNumber,
+    departureTime
+  };
+};
+
 const stripMarkdownLink = (value = '') => {
   const trimmed = String(value).trim();
   const match = trimmed.match(/^\[([^\]]+)\]\([^\)]+\)/);
@@ -288,10 +360,12 @@ const upsertCrawledFlight = async (rawFlight, allAircraft, defaultAircraft) => {
     return { status: 'skipped', reason: 'airport_not_found' };
   }
 
-  const aircraft = resolveAircraftByFlightNumber(rawFlight.flightNumber, allAircraft, defaultAircraft);
+  const aircraft = resolveAircraftByFlightNumber(rawFlight.sourceFlightNumber || rawFlight.flightNumber, allAircraft, defaultAircraft);
 
   const crawlDate = process.env.CRAWL_TARGET_DATE || new Date().toISOString().slice(0, 10);
-  const departureTime = parseDepartureDateTime(rawFlight.departureTime, crawlDate);
+  const departureTime = rawFlight.departureTime instanceof Date
+    ? rawFlight.departureTime
+    : parseDepartureDateTime(rawFlight.departureTime, crawlDate);
   const fallbackDurationMinutes = Number(process.env.CRAWL_DEFAULT_DURATION_MINUTES || 120);
   let arrivalTime = parseDateTime(rawFlight.arrivalTime);
   if (!arrivalTime && departureTime) {
@@ -385,21 +459,26 @@ export const crawlAndStoreFlightsFromHtml = async () => {
 
   let imported = 0;
   let skipped = 0;
+  const targetDates = buildCrawlTargetDates();
 
   for (const rawFlight of rawFlights) {
-    try {
-      const result = await upsertCrawledFlight(rawFlight, allAircraft, defaultAircraft);
-      if (result.status === 'ok') {
-        imported += 1;
-      } else {
+    for (const targetDate of targetDates) {
+      const dateSpecificFlight = buildDateSpecificFlight(rawFlight, targetDate);
+
+      try {
+        const result = await upsertCrawledFlight(dateSpecificFlight, allAircraft, defaultAircraft);
+        if (result.status === 'ok') {
+          imported += 1;
+        } else {
+          skipped += 1;
+        }
+      } catch (error) {
         skipped += 1;
+        logger.warn(`[Crawl] Skip flight ${dateSpecificFlight.flightNumber}: ${error.message}`);
       }
-    } catch (error) {
-      skipped += 1;
-      logger.warn(`[Crawl] Skip flight ${rawFlight.flightNumber}: ${error.message}`);
     }
   }
 
-  logger.info(`[Crawl] Completed. imported=${imported}, skipped=${skipped}, source=${crawlUrl}`);
+  logger.info(`[Crawl] Completed. imported=${imported}, skipped=${skipped}, days=${targetDates.length}, source=${crawlUrl}`);
   return { imported, skipped };
 };
