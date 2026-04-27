@@ -35,10 +35,44 @@ const extractIataCode = (value = '') => {
   return matches[matches.length - 1];
 };
 
+const MONTH_INDEX = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11
+};
+
 const parseDepartureDateTime = (value, crawlDate) => {
   if (!value) return null;
 
   const trimmed = String(value).trim();
+  const referenceDate = crawlDate ? new Date(crawlDate) : new Date();
+
+  const monthDayMatch = trimmed.match(/^([A-Za-z]{3,9})\s+(\d{1,2})(?:,?\s+(\d{4}))?(?:\s+(\d{1,2}):(\d{2}))?$/);
+  if (monthDayMatch && !Number.isNaN(referenceDate.getTime())) {
+    const [, monthText, dayStr, yearStr, hourStr = '0', minuteStr = '0'] = monthDayMatch;
+    const monthIndex = MONTH_INDEX[monthText.slice(0, 3).toLowerCase()];
+
+    if (monthIndex !== undefined) {
+      return new Date(
+        Number(yearStr || referenceDate.getFullYear()),
+        monthIndex,
+        Number(dayStr),
+        Number(hourStr),
+        Number(minuteStr),
+        0,
+        0
+      );
+    }
+  }
 
   const fullDate = new Date(trimmed);
   if (!Number.isNaN(fullDate.getTime())) return fullDate;
@@ -47,7 +81,7 @@ const parseDepartureDateTime = (value, crawlDate) => {
   if (!match) return null;
 
   const [_, hourStr, minuteStr] = match;
-  const base = crawlDate ? new Date(crawlDate) : new Date();
+  const base = referenceDate;
   if (Number.isNaN(base.getTime())) return null;
 
   base.setHours(Number(hourStr), Number(minuteStr), 0, 0);
@@ -63,7 +97,7 @@ const parseDateTime = (value) => {
 
 const stripMarkdownLink = (value = '') => {
   const trimmed = String(value).trim();
-  const match = trimmed.match(/^\[([^\]]+)\]\([^\)]+\)$/);
+  const match = trimmed.match(/^\[([^\]]+)\]\([^\)]+\)/);
   return match ? match[1].trim() : trimmed;
 };
 
@@ -145,14 +179,15 @@ const parseFlightsFromMarkdownTable = (text) => {
     if (!/^[A-Z]{1,3}\d{2,5}$/i.test(flightNumberText)) continue;
 
     const destinationText = stripMarkdownLink(columns[1]);
-    const scheduledTime = stripMarkdownLink(columns[3]);
+    const dateText = stripMarkdownLink(columns[3]);
+    const scheduledTime = stripMarkdownLink(columns[4]);
 
     flights.push({
       flightNumber: flightNumberText,
       originCode,
       destinationCode: extractIataCode(destinationText),
       destinationText,
-      departureTime: scheduledTime,
+      departureTime: `${dateText} ${scheduledTime}`.trim(),
       arrivalTime: null,
       basePrice: ''
     });
