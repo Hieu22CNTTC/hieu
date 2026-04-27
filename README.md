@@ -41,22 +41,23 @@ sudo npm i -g pm2
 ## 4) Cai SQL Server tren Ubuntu (neu DB cung EC2)
 
 Neu ban da co SQL Server o noi khac thi bo qua muc nay va dung `DATABASE_URL` toi host do.
+sudo apt install -y docker.io
+sudo systemctl enable docker --now
 
-```bash
-curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-sudo add-apt-repository "$(curl https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list)"
-sudo apt update
-sudo apt install -y mssql-server
-sudo /opt/mssql/bin/mssql-conf setup
-sudo systemctl enable mssql-server --now
-sudo systemctl status mssql-server --no-pager
+
+chay docker:
+
+docker run -e "ACCEPT_EULA=Y" \
+-e "SA_PASSWORD=YourPass@123" \
+-p 1433:1433 \
+--memory=1g \
+--name sql1 \
+-d mcr.microsoft.com/mssql/server:2022-latest
 ```
 
-Tao database:
+Connect Database in docker từ máy local
 
-```bash
-/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '<SA_PASSWORD>' -C -Q "CREATE DATABASE flight_booking;"
-```
+sqlcmd -S 180.93.52.65,1433 -U sa -P "duonghieu@3004"
 
 ## 5) Clone source va cai backend
 
