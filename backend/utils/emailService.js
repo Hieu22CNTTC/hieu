@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
  */
 export const sendAdminNotificationEmail = async (userEmail, userName, approvalToken) => {
   const adminEmail = 'duongtrunghieu3004@gmail.com';
-  const approvalUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/approve-reset/${approvalToken}`;
+  const approvalUrl = `${process.env.BACKEND_URL || 'http://180.93.52.65:3000'}/api/auth/approve-reset/${approvalToken}`;
   
   const mailOptions = {
     from: {
