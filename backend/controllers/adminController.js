@@ -1579,7 +1579,11 @@ export const getStatistics = asyncHandler(async (req, res) => {
 
   // Parse dates
   const start = startDate ? new Date(startDate) : new Date(new Date().setMonth(new Date().getMonth() - 1));
+  start.setHours(0, 0, 0, 0);
+
   const end = endDate ? new Date(endDate) : new Date();
+  end.setHours(0, 0, 0, 0);
+  end.setDate(end.getDate() + 1);
 
   // Revenue by date
   const revenueData = await prisma.booking.groupBy({
@@ -1587,7 +1591,7 @@ export const getStatistics = asyncHandler(async (req, res) => {
     where: {
       createdAt: {
         gte: start,
-        lte: end
+        lt: end
       },
       status: {
         in: ['CONFIRMED', 'COMPLETED']
@@ -1619,10 +1623,12 @@ export const getStatistics = asyncHandler(async (req, res) => {
     where: {
       createdAt: {
         gte: start,
-        lte: end
+        lt: end
       }
     },
-    _count: true
+    _count: {
+      _all: true
+    }
   });
 
   const bookingsByDate = bookingsData.reduce((acc, item) => {
@@ -1630,13 +1636,14 @@ export const getStatistics = asyncHandler(async (req, res) => {
     if (!acc[date]) {
       acc[date] = 0;
     }
-    acc[date] += item._count;
+    acc[date] += item._count?._all || 0;
     return acc;
   }, {});
 
   const bookingsArray = Object.entries(bookingsByDate).map(([date, count]) => ({
     date,
-    count
+    count,
+    bookings: count
   })).sort((a, b) => new Date(a.date) - new Date(b.date));
 
   // Top routes
@@ -1645,10 +1652,12 @@ export const getStatistics = asyncHandler(async (req, res) => {
     where: {
       createdAt: {
         gte: start,
-        lte: end
+        lt: end
       }
     },
-    _count: true,
+    _count: {
+      flightId: true
+    },
     orderBy: {
       _count: {
         flightId: 'desc'
@@ -1674,9 +1683,12 @@ export const getStatistics = asyncHandler(async (req, res) => {
 
   const topRoutes = topRoutesData.map(data => {
     const flight = flights.find(f => f.id === data.flightId);
+    const bookingCount = data._count?.flightId || 0;
     return {
+      flightNumber: flight?.flightNumber || 'Unknown',
       route: flight ? `${flight.route.departure.code} → ${flight.route.arrival.code}` : 'Unknown',
-      bookings: data._count
+      bookings: bookingCount,
+      count: bookingCount
     };
   });
 

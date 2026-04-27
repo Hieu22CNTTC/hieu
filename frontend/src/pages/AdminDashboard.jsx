@@ -103,6 +103,14 @@ export default function AdminDashboard() {
     }
   }, [dateRange, activeTab])
 
+  const toChartNumber = (value) => {
+    if (typeof value === 'number') return value
+    if (value && typeof value === 'object') {
+      return Number(value._all ?? value.flightId ?? value.count ?? value.bookings ?? 0)
+    }
+    return Number(value || 0)
+  }
+
   const loadChartData = async () => {
     try {
       const { data } = await api.get('/admin/statistics', {
@@ -111,10 +119,36 @@ export default function AdminDashboard() {
           endDate: dateRange.endDate
         }
       })
+      const stats = data.data || {}
+
+      const revenue = (stats.revenueByDate || []).map((item) => ({
+        ...item,
+        revenue: toChartNumber(item.revenue ?? item.totalRevenue)
+      }))
+
+      const bookings = (stats.bookingsByDate || []).map((item) => {
+        const count = toChartNumber(item.count ?? item.bookings ?? item.totalBookings)
+        return {
+          ...item,
+          count,
+          bookings: count
+        }
+      })
+
+      const routes = (stats.topRoutes || []).map((item) => {
+        const bookingsCount = toChartNumber(item.bookings ?? item.count ?? item.totalBookings)
+        return {
+          ...item,
+          route: item.flightNumber ? `${item.flightNumber} - ${item.route}` : item.route,
+          bookings: bookingsCount,
+          count: bookingsCount
+        }
+      })
+
       setChartData({
-        revenue: data.data?.revenueByDate || [],
-        bookings: data.data?.bookingsByDate || [],
-        routes: data.data?.topRoutes || []
+        revenue,
+        bookings,
+        routes
       })
     } catch (error) {
       console.error('Error loading chart data:', error)
