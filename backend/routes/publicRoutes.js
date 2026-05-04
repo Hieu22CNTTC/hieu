@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   searchFlights,
+  getPublicFlightById,
   createPublicBooking,
   checkBooking,
   getBookingTicket,
@@ -24,6 +25,7 @@ const router = express.Router();
  * @access  Public
  */
 router.get('/flights', validate(searchFlightsSchema), searchFlights);
+router.get('/flights/:id', getPublicFlightById);
 
 /**
  * @route   POST /api/public/bookings

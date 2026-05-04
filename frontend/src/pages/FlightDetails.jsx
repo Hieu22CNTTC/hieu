@@ -33,19 +33,16 @@ export default function FlightDetails() {
 
   const fetchFlightDetails = async () => {
     try {
-      const { data } = await api.get(`/public/flights?`)
-      const flights = data.data || []
-      const foundFlight = flights.find(f => f.id === id)
-      
-      if (foundFlight) {
-        setFlight(foundFlight)
-      } else {
-        toast.error('Không tìm thấy chuyến bay')
-        navigate('/search')
-      }
+      const { data } = await api.get(`/public/flights/${id}`)
+      setFlight(data.data)
     } catch (error) {
       console.error('Error:', error)
-      toast.error('Không thể tải thông tin chuyến bay')
+      if (error.response?.status === 404) {
+        toast.error('Không tìm thấy chuyến bay')
+        navigate('/search')
+      } else {
+        toast.error('Không thể tải thông tin chuyến bay')
+      }
     } finally {
       setLoading(false)
     }

@@ -16,8 +16,13 @@ export const searchFlights = asyncHandler(async (req, res) => {
     minPrice,
     maxPrice,
     sortBy = 'departureTime',
-    sortOrder = 'asc'
+    sortOrder = 'asc',
+    limit
   } = req.query;
+
+  // Guardrail: prevent returning too many rows for broad searches.
+  const isBroadQuery = !originAirportId && !destinationAirportId && !departureDate;
+  const take = Math.min(Math.max(Number(limit || (isBroadQuery ? 50 : 200)), 1), 300);
 
   // Build where clause
   const where = {};
@@ -56,16 +61,41 @@ export const searchFlights = asyncHandler(async (req, res) => {
     include: {
       route: {
         include: {
-          departure: true,
-          arrival: true
+          departure: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              city: true
+            }
+          },
+          arrival: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              city: true
+            }
+          }
         }
       },
-      aircraft: true,
-      seatInventory: true
+      aircraft: {
+        select: {
+          model: true,
+          totalSeats: true
+        }
+      },
+      seatInventory: {
+        select: {
+          ticketClass: true,
+          availableSeats: true
+        }
+      }
     },
     orderBy: {
       [sortBy === 'basePrice' ? 'basePrice' : 'departureTime']: sortOrder
-    }
+    },
+    take
   });
 
   // Calculate available seats and filter by price
@@ -115,7 +145,100 @@ export const searchFlights = asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: availableFlights,
-    count: availableFlights.length
+    count: availableFlights.length,
+    meta: {
+      limit: take,
+      broadQuery: isBroadQuery
+    }
+  });
+});
+
+/**
+ * Get a single flight detail by id (public)
+ * GET /api/public/flights/:id
+ */
+export const getPublicFlightById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const flight = await prisma.flight.findUnique({
+    where: { id },
+    include: {
+      route: {
+        include: {
+          departure: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              city: true
+            }
+          },
+          arrival: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              city: true
+            }
+          }
+        }
+      },
+      aircraft: {
+        select: {
+          model: true,
+          totalSeats: true
+        }
+      },
+      seatInventory: {
+        select: {
+          ticketClass: true,
+          availableSeats: true
+        }
+      }
+    }
+  });
+
+  if (!flight) {
+    throw new ApiError(404, 'Flight not found');
+  }
+
+  if (!flight.isActive || flight.departureTime < new Date()) {
+    throw new ApiError(404, 'Flight not available');
+  }
+
+  const economySeats = flight.seatInventory.find(s => s.ticketClass === 'ECONOMY');
+  const businessSeats = flight.seatInventory.find(s => s.ticketClass === 'BUSINESS');
+
+  res.json({
+    success: true,
+    data: {
+      id: flight.id,
+      flightNumber: flight.flightNumber,
+      departureTime: flight.departureTime,
+      arrivalTime: flight.arrivalTime,
+      basePrice: flight.basePrice,
+      businessPrice: flight.businessPrice,
+      economyAvailable: economySeats?.availableSeats || 0,
+      businessAvailable: businessSeats?.availableSeats || 0,
+      origin: {
+        id: flight.route.departure.id,
+        code: flight.route.departure.code,
+        name: flight.route.departure.name,
+        city: flight.route.departure.city
+      },
+      destination: {
+        id: flight.route.arrival.id,
+        code: flight.route.arrival.code,
+        name: flight.route.arrival.name,
+        city: flight.route.arrival.city
+      },
+      duration: flight.route.duration,
+      distance: flight.route.distance,
+      aircraft: {
+        model: flight.aircraft.model,
+        totalSeats: flight.aircraft.totalSeats
+      }
+    }
   });
 });
 

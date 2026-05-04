@@ -21,6 +21,10 @@ export const searchFlightsSchema = {
       .regex(/^\d+$/, 'Max price must be a number')
       .transform(Number)
       .optional(),
+    limit: z.string()
+      .regex(/^\d+$/, 'Limit must be a number')
+      .transform(Number)
+      .optional(),
     sortBy: z.enum(['price', 'basePrice', 'departureTime', 'duration'])
       .optional(),
     sortOrder: z.enum(['asc', 'desc'])
