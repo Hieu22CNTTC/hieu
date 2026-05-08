@@ -179,6 +179,14 @@ const normalizeFlightNumber = (value = '') => {
   return match ? match[0].replace(/\s+/g, '') : '';
 };
 
+const extractMarkdownUrls = (value = '') =>
+  [...String(value).matchAll(/\((https?:\/\/[^\s)]+)(?:\s+"[^"]*")?\)/g)].map(match => match[1]);
+
+const extractLastMarkdownUrl = (value = '') => {
+  const urls = extractMarkdownUrls(value);
+  return urls[urls.length - 1] || '';
+};
+
 const withRetry = async (fn, retries = 3, baseDelayMs = 1200) => {
   let lastError = null;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -247,65 +255,111 @@ const parseFlightsFromMarkdownTable = (text) => {
   const lines = String(text || '').split(/\r?\n/);
   const flights = [];
   const originCode = normalizeAirportCode(process.env.CRAWL_ORIGIN_CODE || 'HAN');
-  let airportiaDepartureTable = false;
+  let inDepartureTable = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
     const normalizedHeader = trimmed.replace(/\s+/g, ' ').toLowerCase();
-    if (normalizedHeader.includes('flight') && normalizedHeader.includes('| to') && normalizedHeader.includes('| scheduled')) {
-      airportiaDepartureTable = true;
+    if (normalizedHeader.includes('| flight | to | airline | date | scheduled | departure | status |')) {
+      inDepartureTable = true;
       continue;
     }
-    if (normalizedHeader.includes('flight') && normalizedHeader.includes('| from') && normalizedHeader.includes('| scheduled')) {
-      airportiaDepartureTable = false;
+    if (normalizedHeader.includes('| flight | from | airline | scheduled | arrival | status |')) {
+      inDepartureTable = false;
       continue;
-    }
-
-    if (airportiaDepartureTable && /^#{1,6}\s/.test(trimmed)) {
-      airportiaDepartureTable = false;
     }
 
     if (!trimmed.includes('|')) continue;
     const columns = trimmed.split('|').map((v) => v.trim()).filter(Boolean);
-    if (columns.length < 4) continue;
+    if (columns.length < 7) continue;
     if (columns.every((column) => /^-+$/.test(column))) continue;
+
+    const flightNumberText = normalizeFlightNumber(columns[0]);
+    if (!flightNumberText || !inDepartureTable) continue;
+
+    const destinationText = stripMarkdownLink(columns[1]);
+    const dateText = stripMarkdownLink(columns[3]);
+    const scheduledTime = stripMarkdownLink(columns[4]);
+
+    flights.push({
+      flightNumber: flightNumberText,
+      originCode,
+      destinationCode: extractIataCode(destinationText),
+      destinationText,
+      departureTime: `${dateText} ${scheduledTime}`.trim(),
+      arrivalTime: null,
+      basePrice: ''
+    });
+  }
+
+  return flights;
+};
+
+const parseAirportRoutesFromMarkdownTable = (text) => {
+  const lines = String(text || '').split(/\r?\n/);
+  const routes = [];
+  let inRoutesTable = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (trimmed === '| # | Destination Airport | Last Seen | Number of Flights |') {
+      inRoutesTable = true;
+      continue;
+    }
+
+    if (!inRoutesTable) continue;
+    if (!trimmed.startsWith('|')) continue;
+    if (/^\| ---/.test(trimmed)) continue;
+
+    const routeMatch = trimmed.match(/\b([A-Z]{3})\s*>\s*([A-Z]{3})\b/);
+    const routeUrl = extractLastMarkdownUrl(trimmed);
+    if (!routeMatch || !routeUrl) continue;
+
+    routes.push({
+      originCode: routeMatch[1].toUpperCase(),
+      destinationCode: routeMatch[2].toUpperCase(),
+      routeUrl
+    });
+  }
+
+  return routes;
+};
+
+const parseRouteFlightsFromMarkdownTable = (text) => {
+  const lines = String(text || '').split(/\r?\n/);
+  const flights = [];
+  let inFlightsTable = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (trimmed === '| Flight | Airline | Last Seen | Departure | Arrival |  |') {
+      inFlightsTable = true;
+      continue;
+    }
+
+    if (!inFlightsTable) continue;
+    if (!trimmed.startsWith('|')) continue;
+    if (/^\| ---/.test(trimmed)) continue;
+
+    const columns = trimmed.split('|').map((v) => v.trim()).filter(Boolean);
+    if (columns.length < 5) continue;
 
     const flightNumberText = normalizeFlightNumber(columns[0]);
     if (!flightNumberText) continue;
 
-    if (airportiaDepartureTable) {
-      const destinationText = stripMarkdownLink(columns[1]);
-      const scheduledTime = stripMarkdownLink(columns[2]);
-
-      flights.push({
-        flightNumber: flightNumberText,
-        originCode,
-        destinationCode: extractIataCode(destinationText),
-        destinationText,
-        departureTime: scheduledTime,
-        arrivalTime: null,
-        basePrice: ''
-      });
-      continue;
-    }
-
-    if (columns.length >= 6) {
-      const destinationText = stripMarkdownLink(columns[1]);
-      const dateText = stripMarkdownLink(columns[3]);
-      const scheduledTime = stripMarkdownLink(columns[4]);
-
-      flights.push({
-        flightNumber: flightNumberText,
-        originCode,
-        destinationCode: extractIataCode(destinationText),
-        destinationText,
-        departureTime: `${dateText} ${scheduledTime}`.trim(),
-        arrivalTime: null,
-        basePrice: ''
-      });
-    }
+    flights.push({
+      flightNumber: flightNumberText,
+      departureTime: stripMarkdownLink(columns[3]),
+      arrivalTime: stripMarkdownLink(columns[4]),
+      airline: stripMarkdownLink(columns[1]),
+      basePrice: ''
+    });
   }
 
   return flights;
@@ -487,16 +541,49 @@ export const crawlAndStoreFlightsFromHtml = async () => {
   const sourceMode = String(process.env.CRAWL_SOURCE_MODE || '').toLowerCase();
   let rawFlights = [];
 
-  if (sourceMode === 'markdown' || crawlUrl.includes('r.jina.ai/')) {
-    rawFlights = parseFlightsFromMarkdownTable(response.data);
+  if (sourceMode === 'routes' || crawlUrl.includes('/routes/')) {
+    const airports = await prisma.airport.findMany({
+      select: { code: true }
+    });
+    const airportCodes = new Set(airports.map(a => normalizeAirportCode(a.code)));
+    const routeEntries = parseAirportRoutesFromMarkdownTable(response.data)
+      .filter(route => airportCodes.has(route.originCode) && airportCodes.has(route.destinationCode));
+
+    const seenRoutes = new Set();
+    for (const route of routeEntries) {
+      const routeKey = `${route.originCode}>${route.destinationCode}`;
+      if (seenRoutes.has(routeKey)) continue;
+      seenRoutes.add(routeKey);
+
+      const routeResponse = await withRetry(() => axios.get(route.routeUrl, {
+        timeout,
+        headers: {
+          'User-Agent': userAgent,
+          Accept: 'text/html,application/xhtml+xml'
+        }
+      }));
+
+      const routeFlights = parseRouteFlightsFromMarkdownTable(routeResponse.data);
+      for (const routeFlight of routeFlights) {
+        rawFlights.push({
+          ...routeFlight,
+          originCode: route.originCode,
+          destinationCode: route.destinationCode
+        });
+      }
+    }
+  } else {
+    if (sourceMode === 'markdown' || crawlUrl.includes('r.jina.ai/')) {
+      rawFlights = parseFlightsFromMarkdownTable(response.data);
+    }
+
+    if (rawFlights.length === 0) {
+      rawFlights = await parseFlightsFromHtml(response.data, selectorConfig);
+    }
   }
 
   if (rawFlights.length === 0) {
-    rawFlights = await parseFlightsFromHtml(response.data, selectorConfig);
-  }
-
-  if (rawFlights.length === 0) {
-    logger.warn('[Crawl] No flight item found from HTML, check selectors');
+    logger.warn('[Crawl] No flight item found from source');
     return { imported: 0, skipped: 0, reason: 'no_items' };
   }
 

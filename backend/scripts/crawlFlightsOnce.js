@@ -7,6 +7,8 @@ dotenv.config();
 
 const run = async () => {
   try {
+    process.env.CRAWL_SOURCE_MODE = process.env.CRAWL_SOURCE_MODE || 'routes';
+    process.env.CRAWL_SOURCE_URL = process.env.CRAWL_SOURCE_URL || 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/routes/';
     await connectDatabase();
     const result = await crawlAndStoreFlightsFromHtml();
     logger.info(`[CrawlOnce] imported=${result.imported || 0}, skipped=${result.skipped || 0}`);

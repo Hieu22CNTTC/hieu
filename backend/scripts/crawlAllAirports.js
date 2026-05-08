@@ -8,15 +8,15 @@ dotenv.config();
 const AIRPORTS = [
   {
     code: 'HAN',
-    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/',
+    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/routes/',
   },
   {
     code: 'SGN',
-    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/',
+    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/routes/',
   },
   {
     code: 'DAD',
-    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/',
+    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/routes/',
   },
 ];
 
@@ -32,7 +32,7 @@ const run = async () => {
     logger.info(`[CrawlAll] Starting crawl for ${airport.code} from ${airport.url}`);
     process.env.CRAWL_SOURCE_URL = airport.url;
     process.env.CRAWL_ORIGIN_CODE = airport.code;
-    process.env.CRAWL_SOURCE_MODE = 'markdown';
+    process.env.CRAWL_SOURCE_MODE = 'routes';
 
     try {
       const result = await crawlAndStoreFlightsFromHtml();

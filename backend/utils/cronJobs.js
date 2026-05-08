@@ -139,9 +139,9 @@ export const startFlightHtmlCrawlJob = () => {
   const schedule = process.env.CRAWL_JOB_SCHEDULE || '0 */8 * * *';
 
   const CRAWL_AIRPORTS = [
-    { code: 'HAN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/' },
-    { code: 'SGN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/' },
-    { code: 'DAD', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/' },
+    { code: 'HAN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/routes/' },
+    { code: 'SGN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/routes/' },
+    { code: 'DAD', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/routes/' },
   ];
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -154,7 +154,7 @@ export const startFlightHtmlCrawlJob = () => {
       try {
         process.env.CRAWL_SOURCE_URL = airport.url;
         process.env.CRAWL_ORIGIN_CODE = airport.code;
-        process.env.CRAWL_SOURCE_MODE = 'markdown';
+        process.env.CRAWL_SOURCE_MODE = 'routes';
         const result = await crawlAndStoreFlightsFromHtml();
         totalImported += result.imported || 0;
         totalSkipped += result.skipped || 0;
