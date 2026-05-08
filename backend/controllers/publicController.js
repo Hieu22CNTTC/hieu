@@ -206,9 +206,11 @@ export const getPublicFlightById = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Flight not found');
   }
 
-  if (!flight.isActive || flight.departureTime < new Date()) {
+  if (!flight.isActive) {
     throw new ApiError(404, 'Flight not available');
   }
+
+  const isBookable = flight.departureTime >= new Date();
 
   const economySeats = flight.seatInventory.find(s => s.ticketClass === 'ECONOMY');
   const businessSeats = flight.seatInventory.find(s => s.ticketClass === 'BUSINESS');
@@ -224,6 +226,7 @@ export const getPublicFlightById = asyncHandler(async (req, res) => {
       businessPrice: flight.businessPrice,
       economyAvailable: economySeats?.availableSeats || 0,
       businessAvailable: businessSeats?.availableSeats || 0,
+      isBookable,
       origin: {
         id: flight.route.departure.id,
         code: flight.route.departure.code,
