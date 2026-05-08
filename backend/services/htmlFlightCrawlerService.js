@@ -173,6 +173,12 @@ const stripMarkdownLink = (value = '') => {
   return match ? match[1].trim() : trimmed;
 };
 
+const normalizeFlightNumber = (value = '') => {
+  const text = stripMarkdownLink(value).replace(/\s+/g, ' ').trim().toUpperCase();
+  const match = text.match(/[A-Z]{1,3}\s?\d{2,5}/);
+  return match ? match[0].replace(/\s+/g, '') : '';
+};
+
 const withRetry = async (fn, retries = 3, baseDelayMs = 1200) => {
   let lastError = null;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -241,28 +247,65 @@ const parseFlightsFromMarkdownTable = (text) => {
   const lines = String(text || '').split(/\r?\n/);
   const flights = [];
   const originCode = normalizeAirportCode(process.env.CRAWL_ORIGIN_CODE || 'HAN');
+  let airportiaDepartureTable = false;
 
   for (const line of lines) {
-    if (!line.startsWith('|')) continue;
-    const columns = line.split('|').map((v) => v.trim()).filter(Boolean);
-    if (columns.length < 6) continue;
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-    const flightNumberText = stripMarkdownLink(columns[0]);
-    if (!/^[A-Z]{1,3}\d{2,5}$/i.test(flightNumberText)) continue;
+    const normalizedHeader = trimmed.replace(/\s+/g, ' ').toLowerCase();
+    if (normalizedHeader.includes('flight') && normalizedHeader.includes('| to') && normalizedHeader.includes('| scheduled')) {
+      airportiaDepartureTable = true;
+      continue;
+    }
+    if (normalizedHeader.includes('flight') && normalizedHeader.includes('| from') && normalizedHeader.includes('| scheduled')) {
+      airportiaDepartureTable = false;
+      continue;
+    }
 
-    const destinationText = stripMarkdownLink(columns[1]);
-    const dateText = stripMarkdownLink(columns[3]);
-    const scheduledTime = stripMarkdownLink(columns[4]);
+    if (airportiaDepartureTable && /^#{1,6}\s/.test(trimmed)) {
+      airportiaDepartureTable = false;
+    }
 
-    flights.push({
-      flightNumber: flightNumberText,
-      originCode,
-      destinationCode: extractIataCode(destinationText),
-      destinationText,
-      departureTime: `${dateText} ${scheduledTime}`.trim(),
-      arrivalTime: null,
-      basePrice: ''
-    });
+    if (!trimmed.includes('|')) continue;
+    const columns = trimmed.split('|').map((v) => v.trim()).filter(Boolean);
+    if (columns.length < 4) continue;
+    if (columns.every((column) => /^-+$/.test(column))) continue;
+
+    const flightNumberText = normalizeFlightNumber(columns[0]);
+    if (!flightNumberText) continue;
+
+    if (airportiaDepartureTable) {
+      const destinationText = stripMarkdownLink(columns[1]);
+      const scheduledTime = stripMarkdownLink(columns[2]);
+
+      flights.push({
+        flightNumber: flightNumberText,
+        originCode,
+        destinationCode: extractIataCode(destinationText),
+        destinationText,
+        departureTime: scheduledTime,
+        arrivalTime: null,
+        basePrice: ''
+      });
+      continue;
+    }
+
+    if (columns.length >= 6) {
+      const destinationText = stripMarkdownLink(columns[1]);
+      const dateText = stripMarkdownLink(columns[3]);
+      const scheduledTime = stripMarkdownLink(columns[4]);
+
+      flights.push({
+        flightNumber: flightNumberText,
+        originCode,
+        destinationCode: extractIataCode(destinationText),
+        destinationText,
+        departureTime: `${dateText} ${scheduledTime}`.trim(),
+        arrivalTime: null,
+        basePrice: ''
+      });
+    }
   }
 
   return flights;

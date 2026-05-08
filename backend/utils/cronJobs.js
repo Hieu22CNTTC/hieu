@@ -139,9 +139,9 @@ export const startFlightHtmlCrawlJob = () => {
   const schedule = process.env.CRAWL_JOB_SCHEDULE || '0 */8 * * *';
 
   const CRAWL_AIRPORTS = [
-    { code: 'HAN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/departures/' },
-    { code: 'SGN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/departures/' },
-    { code: 'DAD', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/departures/' },
+    { code: 'HAN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/' },
+    { code: 'SGN', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/' },
+    { code: 'DAD', url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/' },
   ];
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

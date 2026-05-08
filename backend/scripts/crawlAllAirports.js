@@ -8,15 +8,15 @@ dotenv.config();
 const AIRPORTS = [
   {
     code: 'HAN',
-    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/departures/',
+    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/noi-bai-international-airport/',
   },
   {
     code: 'SGN',
-    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/departures/',
+    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/tan-son-nhat-international-airport/',
   },
   {
     code: 'DAD',
-    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/departures/',
+    url: 'https://r.jina.ai/http://www.airportia.com/vietnam/da-nang-international-airport/',
   },
 ];
 
