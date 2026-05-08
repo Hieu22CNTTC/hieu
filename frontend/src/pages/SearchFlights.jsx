@@ -352,7 +352,7 @@ export default function SearchFlights() {
                     </div>
                     <button
                       className="btn btn-primary btn-sm w-32"
-                      onClick={() => navigate(`/flights/${flight.id}`)}
+                      onClick={() => navigate(`/flights/${flight.id}`, { state: { flight } })}
                       disabled={flight.economyAvailable === 0 && flight.businessAvailable === 0}
                     >
                       {flight.economyAvailable === 0 && flight.businessAvailable === 0

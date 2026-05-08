@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import api from '../utils/api'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../stores/authStore'
@@ -7,9 +7,10 @@ import { useAuthStore } from '../stores/authStore'
 export default function FlightDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuthStore()
-  const [loading, setLoading] = useState(true)
-  const [flight, setFlight] = useState(null)
+  const [loading, setLoading] = useState(!location.state?.flight)
+  const [flight, setFlight] = useState(location.state?.flight || null)
   const [ticketClass, setTicketClass] = useState('ECONOMY')
   const [passengers, setPassengers] = useState([{
     fullName: user?.fullName || '',
@@ -28,7 +29,7 @@ export default function FlightDetails() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    fetchFlightDetails()
+    if (!flight) fetchFlightDetails()
   }, [id])
 
   const fetchFlightDetails = async () => {
@@ -37,7 +38,7 @@ export default function FlightDetails() {
       setFlight(data.data)
     } catch (error) {
       console.error('Error:', error)
-      if (error.response?.status === 404) {
+      if (!flight && error.response?.status === 404) {
         toast.error('Không tìm thấy chuyến bay')
         navigate('/search')
       } else {

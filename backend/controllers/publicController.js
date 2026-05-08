@@ -164,8 +164,13 @@ export const searchFlights = asyncHandler(async (req, res) => {
 export const getPublicFlightById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const flight = await prisma.flight.findUnique({
-    where: { id },
+  const flight = await prisma.flight.findFirst({
+    where: {
+      OR: [
+        { id },
+        { flightNumber: id }
+      ]
+    },
     include: {
       route: {
         include: {
