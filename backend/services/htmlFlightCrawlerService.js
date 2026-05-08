@@ -187,6 +187,13 @@ const extractLastMarkdownUrl = (value = '') => {
   return urls[urls.length - 1] || '';
 };
 
+const toJinaReaderUrl = (url = '') => {
+  const rawUrl = String(url).trim();
+  if (!rawUrl || rawUrl.includes('r.jina.ai/')) return rawUrl;
+  if (!/^https?:\/\//i.test(rawUrl)) return rawUrl;
+  return `https://r.jina.ai/http://${rawUrl.replace(/^https?:\/\//i, '')}`;
+};
+
 const withRetry = async (fn, retries = 3, baseDelayMs = 1200) => {
   let lastError = null;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
@@ -555,13 +562,20 @@ export const crawlAndStoreFlightsFromHtml = async () => {
       if (seenRoutes.has(routeKey)) continue;
       seenRoutes.add(routeKey);
 
-      const routeResponse = await withRetry(() => axios.get(route.routeUrl, {
-        timeout,
-        headers: {
-          'User-Agent': userAgent,
-          Accept: 'text/html,application/xhtml+xml'
-        }
-      }));
+      const routeUrl = toJinaReaderUrl(route.routeUrl);
+      let routeResponse;
+      try {
+        routeResponse = await withRetry(() => axios.get(routeUrl, {
+          timeout,
+          headers: {
+            'User-Agent': userAgent,
+            Accept: 'text/html,application/xhtml+xml'
+          }
+        }));
+      } catch (error) {
+        logger.warn(`[Crawl] Skip route ${routeKey}: ${error.response?.status || ''} ${error.message}`.trim());
+        continue;
+      }
 
       const routeFlights = parseRouteFlightsFromMarkdownTable(routeResponse.data);
       for (const routeFlight of routeFlights) {
