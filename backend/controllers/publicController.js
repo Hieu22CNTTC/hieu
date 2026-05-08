@@ -24,8 +24,12 @@ export const searchFlights = asyncHandler(async (req, res) => {
   const isBroadQuery = !originAirportId && !destinationAirportId && !departureDate;
   const take = Math.min(Math.max(Number(limit || (isBroadQuery ? 50 : 200)), 1), 300);
 
+  const now = new Date();
+
   // Build where clause
-  const where = {};
+  const where = {
+    isActive: true
+  };
 
   // Filter by route if airports specified
   if (originAirportId || destinationAirportId) {
@@ -45,13 +49,13 @@ export const searchFlights = asyncHandler(async (req, res) => {
     nextDay.setDate(nextDay.getDate() + 1);
     
     where.departureTime = {
-      gte: date,
+      gte: date > now ? date : now,
       lt: nextDay
     };
   } else {
     // Only show future flights
     where.departureTime = {
-      gte: new Date()
+      gte: now
     };
   }
 
