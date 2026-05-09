@@ -4,6 +4,43 @@ import { ApiError } from '../middleware/errorHandler.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import logger from '../utils/logger.js';
 
+const AIRPORT_CACHE_TTL_MS = 10 * 60 * 1000;
+let airportsCache = {
+  data: null,
+  expiresAt: 0
+};
+
+const isTransientDbError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('server has closed the connection') ||
+    message.includes('can\'t reach database server') ||
+    message.includes('connection') ||
+    message.includes('timed out')
+  );
+};
+
+const withDbRetry = async (operation, label, retries = 1) => {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      const canRetry = attempt < retries && isTransientDbError(error);
+      if (!canRetry) {
+        throw error;
+      }
+
+      logger.warn(`${label} failed (attempt ${attempt + 1}), reconnecting Prisma and retrying once`);
+      try {
+        await prisma.$disconnect();
+      } catch {
+        // Ignore disconnect errors and continue reconnecting.
+      }
+      await prisma.$connect();
+    }
+  }
+};
+
 /**
  * Search flights
  * GET /api/public/flights
@@ -20,16 +57,41 @@ export const searchFlights = asyncHandler(async (req, res) => {
     limit
   } = req.query;
 
+  const parsedMinPrice = Number(minPrice);
+  const parsedMaxPrice = Number(maxPrice);
+  const hasMinPrice = minPrice !== undefined && minPrice !== '' && Number.isFinite(parsedMinPrice);
+  const hasMaxPrice = maxPrice !== undefined && maxPrice !== '' && Number.isFinite(parsedMaxPrice);
+
+  const safeSortBy = sortBy === 'basePrice' ? 'basePrice' : 'departureTime';
+  const safeSortOrder = sortOrder === 'desc' ? 'desc' : 'asc';
+
   // Guardrail: prevent returning too many rows for broad searches.
   const isBroadQuery = !originAirportId && !destinationAirportId && !departureDate;
-  const take = Math.min(Math.max(Number(limit || (isBroadQuery ? 50 : 200)), 1), 300);
+  const take = Math.min(Math.max(Number(limit || (isBroadQuery ? 25 : 40)), 1), 60);
 
   const now = new Date();
 
   // Build where clause
   const where = {
-    isActive: true
+    isActive: true,
+    seatInventory: {
+      some: {
+        availableSeats: {
+          gt: 0
+        }
+      }
+    }
   };
+
+  if (hasMinPrice || hasMaxPrice) {
+    where.basePrice = {};
+    if (hasMinPrice) {
+      where.basePrice.gte = parsedMinPrice;
+    }
+    if (hasMaxPrice) {
+      where.basePrice.lte = parsedMaxPrice;
+    }
+  }
 
   // Filter by route if airports specified
   if (originAirportId || destinationAirportId) {
@@ -60,7 +122,7 @@ export const searchFlights = asyncHandler(async (req, res) => {
   }
 
   // Get flights
-  const flights = await prisma.flight.findMany({
+  const flights = await withDbRetry(() => prisma.flight.findMany({
     where,
     include: {
       route: {
@@ -90,6 +152,11 @@ export const searchFlights = asyncHandler(async (req, res) => {
         }
       },
       seatInventory: {
+        where: {
+          ticketClass: {
+            in: ['ECONOMY', 'BUSINESS']
+          }
+        },
         select: {
           ticketClass: true,
           availableSeats: true
@@ -97,12 +164,12 @@ export const searchFlights = asyncHandler(async (req, res) => {
       }
     },
     orderBy: {
-      [sortBy === 'basePrice' ? 'basePrice' : 'departureTime']: sortOrder
+      [safeSortBy]: safeSortOrder
     },
     take
-  });
+  }), 'searchFlights.findMany');
 
-  // Calculate available seats and filter by price
+  // Build response model
   const availableFlights = flights
     .map(flight => {
       const economySeats = flight.seatInventory.find(s => s.ticketClass === 'ECONOMY');
@@ -136,14 +203,6 @@ export const searchFlights = asyncHandler(async (req, res) => {
           totalSeats: flight.aircraft.totalSeats
         }
       };
-    })
-    .filter(flight => {
-      // Filter by price range
-      if (minPrice && flight.basePrice < minPrice) return false;
-      if (maxPrice && flight.basePrice > maxPrice) return false;
-      
-      // Only show flights with available seats
-      return flight.economyAvailable > 0 || flight.businessAvailable > 0;
     });
 
   res.json({
@@ -164,48 +223,52 @@ export const searchFlights = asyncHandler(async (req, res) => {
 export const getPublicFlightById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const flight = await prisma.flight.findFirst({
-    where: {
-      OR: [
-        { id },
-        { flightNumber: id }
-      ]
-    },
-    include: {
-      route: {
-        include: {
-          departure: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-              city: true
-            }
-          },
-          arrival: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-              city: true
-            }
+  const flightInclude = {
+    route: {
+      include: {
+        departure: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            city: true
+          }
+        },
+        arrival: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            city: true
           }
         }
-      },
-      aircraft: {
-        select: {
-          model: true,
-          totalSeats: true
-        }
-      },
-      seatInventory: {
-        select: {
-          ticketClass: true,
-          availableSeats: true
-        }
+      }
+    },
+    aircraft: {
+      select: {
+        model: true,
+        totalSeats: true
+      }
+    },
+    seatInventory: {
+      select: {
+        ticketClass: true,
+        availableSeats: true
       }
     }
+  };
+
+  let flight = await prisma.flight.findUnique({
+    where: { id },
+    include: flightInclude
   });
+
+  if (!flight) {
+    flight = await prisma.flight.findUnique({
+      where: { flightNumber: id },
+      include: flightInclude
+    });
+  }
 
   if (!flight) {
     throw new ApiError(404, 'Flight not found');
@@ -593,15 +656,52 @@ export const getTicketTypes = asyncHandler(async (req, res) => {
  * GET /api/public/airports
  */
 export const getAirports = asyncHandler(async (req, res) => {
-  const airports = await prisma.airport.findMany({
-    orderBy: { city: 'asc' }
-  });
+  const now = Date.now();
+  if (airportsCache.data && now < airportsCache.expiresAt) {
+    return res.json({
+      success: true,
+      data: airportsCache.data,
+      count: airportsCache.data.length,
+      meta: {
+        cached: true
+      }
+    });
+  }
 
-  res.json({
-    success: true,
-    data: airports,
-    count: airports.length
-  });
+  try {
+    const airports = await withDbRetry(() => prisma.airport.findMany({
+      orderBy: { city: 'asc' }
+    }), 'getAirports.findMany');
+
+    airportsCache = {
+      data: airports,
+      expiresAt: now + AIRPORT_CACHE_TTL_MS
+    };
+
+    return res.json({
+      success: true,
+      data: airports,
+      count: airports.length,
+      meta: {
+        cached: false
+      }
+    });
+  } catch (error) {
+    if (airportsCache.data) {
+      logger.warn('Serving stale airport cache because database is unavailable');
+      return res.json({
+        success: true,
+        data: airportsCache.data,
+        count: airportsCache.data.length,
+        meta: {
+          cached: true,
+          stale: true
+        }
+      });
+    }
+
+    throw error;
+  }
 });
 
 /**

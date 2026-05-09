@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeftRight, Search, Plane, Clock, TrendingUp, SlidersHorizontal } from 'lucide-react'
 import api from '../utils/api'
@@ -20,6 +20,7 @@ const getAirlineName = (flightNumber = '') => {
 export default function SearchFlights() {
   const navigate = useNavigate()
   const [urlSearchParams] = useSearchParams()
+  const latestRequestIdRef = useRef(0)
   const [airports, setAirports] = useState([])
   const [loading, setLoading] = useState(false)
   const [flights, setFlights] = useState([])
@@ -76,10 +77,8 @@ export default function SearchFlights() {
     setSearchForm(newForm)
 
     if (fromAirport && toAirport && date) {
-      setTimeout(() => {
-        performSearch(newForm, sortBy, sortOrder)
-        setAutoSearchDone(true)
-      }, 400)
+      setAutoSearchDone(true)
+      performSearch(newForm, sortBy, sortOrder)
     }
   }, [airports, urlSearchParams, autoSearchDone])
 
@@ -91,10 +90,13 @@ export default function SearchFlights() {
       return
     }
 
+    const requestId = ++latestRequestIdRef.current
     setLoading(true)
     try {
       const params = { ...form, sortBy: sb, sortOrder: so }
       const { data } = await api.get('/public/flights', { params })
+      if (requestId !== latestRequestIdRef.current) return
+
       const result = data.data || []
       setFlights(result)
       setSearched(true)
@@ -104,9 +106,12 @@ export default function SearchFlights() {
         toast.success(`Tìm thấy ${result.length} chuyến bay`)
       }
     } catch (error) {
+      if (requestId !== latestRequestIdRef.current) return
       toast.error(error.response?.data?.message || 'Lỗi tìm kiếm chuyến bay')
     } finally {
-      setLoading(false)
+      if (requestId === latestRequestIdRef.current) {
+        setLoading(false)
+      }
     }
   }
 

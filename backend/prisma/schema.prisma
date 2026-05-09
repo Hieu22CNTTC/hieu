@@ -40,6 +40,7 @@ model Airport {
   departureRoutes Route[] @relation("DepartureAirport")
   arrivalRoutes   Route[] @relation("ArrivalAirport")
 
+  @@index([city])
   @@map("airports")
 }
 
@@ -113,6 +114,8 @@ model Flight {
   seatHolds         SeatHold[]
   bookings          Booking[]
 
+  @@index([isActive, departureTime])
+  @@index([routeId, departureTime])
   @@map("flights")
 }
 
@@ -128,6 +131,7 @@ model SeatInventory {
   flight          Flight      @relation(fields: [flightId], references: [id], onDelete: Cascade)
 
   @@unique([flightId, ticketClass])
+  @@index([flightId, availableSeats])
   @@map("seat_inventory")
 }
 
